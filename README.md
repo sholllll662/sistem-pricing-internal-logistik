@@ -54,3 +54,8 @@ Seeder menggunakan variabel env berikut:
 - `ADMIN_PASSWORD` (default: `password`)
 
 Ubah variabel ini di `.env` sebelum menjalankan `php artisan migrate --seed`.
+
+Catatan:
+- role default yang akan dibuat: `sales`, `manager`, `admin`
+- admin bootstrap hanya dibuat otomatis pada environment `local` atau `development`
+- proses seeding idempotent (aman dijalankan berulang tanpa duplikasi role dan relasi admin)
