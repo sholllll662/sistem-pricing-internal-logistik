@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Gate;
 
 class User extends Authenticatable implements FilamentUser
 {
@@ -52,11 +53,16 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return true;
+        return Gate::forUser($this)->allows('access-admin-panel');
     }
 
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class);
+    }
+
+    public function hasRole(string $code): bool
+    {
+        return $this->roles()->where('code', $code)->exists();
     }
 }
