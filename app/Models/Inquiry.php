@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Inquiry extends Model
 {
@@ -87,5 +88,10 @@ class Inquiry extends Model
     public function destinationLocation(): BelongsTo
     {
         return $this->belongsTo(Location::class, 'destination_location_id');
+    }
+
+    public function inquiryScenarios(): HasMany
+    {
+        return $this->hasMany(InquiryScenario::class);
     }
 }
