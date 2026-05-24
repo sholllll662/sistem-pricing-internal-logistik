@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Inquiries\Tables;
 
+use App\Models\Inquiry;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -58,6 +60,10 @@ class InquiriesTable
                 //
             ])
             ->recordActions([
+                Action::make('scenario_builder')
+                    ->label('Scenario Builder')
+                    ->icon('heroicon-o-squares-plus')
+                    ->url(fn (Inquiry $record): string => route('inquiries.scenario-builder', $record)),
                 EditAction::make(),
             ])
             ->toolbarActions([
