@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CostCategory extends Model
 {
@@ -11,4 +12,9 @@ class CostCategory extends Model
         'name',
         'description',
     ];
+
+    public function legCostItems(): HasMany
+    {
+        return $this->hasMany(LegCostItem::class);
+    }
 }
