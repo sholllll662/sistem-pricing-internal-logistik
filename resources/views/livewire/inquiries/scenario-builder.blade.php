@@ -44,7 +44,7 @@
                                 class="w-full rounded-md border px-3 py-2 text-left text-sm transition {{ $activeScenarioId === $scenario->id ? 'border-amber-400 bg-amber-50 text-amber-900' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50' }}"
                             >
                                 <p class="font-medium">{{ $scenario->scenario_name }}</p>
-                                <p class="text-xs opacity-80">{{ $scenario->scenario_code }} Â· {{ $scenario->status }}</p>
+                                <p class="text-xs opacity-80">{{ $scenario->scenario_code }} · {{ $scenario->status }}</p>
                             </button>
                         @endforeach
                     </div>
@@ -229,18 +229,162 @@
                     @endif
                 </div>
 
-                <div class="grid gap-6 md:grid-cols-2">
-                    <div class="rounded-lg border border-dashed border-gray-300 bg-white p-5 shadow-sm">
-                        <h3 class="text-sm font-semibold text-gray-900">Cost Items</h3>
-                        <p class="mt-2 text-sm text-gray-600">Cost item entry placeholder for upcoming implementation.</p>
+                <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-gray-900">Cost Item Management</h3>
+                        <span class="text-xs text-gray-500">Per-leg breakdown</span>
                     </div>
-                    <div class="rounded-lg border border-dashed border-gray-300 bg-white p-5 shadow-sm">
-                        <h3 class="text-sm font-semibold text-gray-900">Pricing Summary</h3>
-                        <p class="mt-2 text-sm text-gray-600">Pricing summary and calculations will be added next.</p>
-                    </div>
+
+                    @if (! $this->activeScenario || $this->scenarioLegs->isEmpty())
+                        <p class="mt-2 text-sm text-gray-600">Add a leg first before entering cost items.</p>
+                    @else
+                        <form wire:submit="saveCostItem" class="mt-4 grid gap-3 md:grid-cols-2">
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Leg</label>
+                                <select wire:model="costItemForm.leg_id" class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500">
+                                    <option value="">Select leg</option>
+                                    @foreach($this->scenarioLegs as $leg)
+                                        <option value="{{ $leg->id }}">#{{ $leg->sequence_no }} - {{ $leg->originLocation?->name ?? '-' }} to {{ $leg->destinationLocation?->name ?? '-' }}</option>
+                                    @endforeach
+                                </select>
+                                @error('costItemForm.leg_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Cost Category</label>
+                                <select wire:model="costItemForm.cost_category_id" class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500">
+                                    <option value="">Select category</option>
+                                    @foreach($this->costCategoryOptions as $id => $name)
+                                        <option value="{{ $id }}">{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                                @error('costItemForm.cost_category_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Vendor</label>
+                                <select wire:model="costItemForm.vendor_id" class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500">
+                                    <option value="">Optional</option>
+                                    @foreach($this->vendorOptions as $id => $name)
+                                        <option value="{{ $id }}">{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Item Name</label>
+                                <input type="text" wire:model="costItemForm.item_name" class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500">
+                                @error('costItemForm.item_name') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="text-xs font-medium text-gray-600">Description</label>
+                                <textarea rows="2" wire:model="costItemForm.description" class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500"></textarea>
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Quantity</label>
+                                <input type="number" min="0" step="0.0001" wire:model="costItemForm.quantity" class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500">
+                                @error('costItemForm.quantity') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Unit Name</label>
+                                <input type="text" wire:model="costItemForm.unit_name" class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500" placeholder="trip, kg, unit">
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Unit Price</label>
+                                <input type="number" min="0" step="0.01" wire:model="costItemForm.unit_price" class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500">
+                                @error('costItemForm.unit_price') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Price Source Date</label>
+                                <input type="date" wire:model="costItemForm.price_source_date" class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="text-xs font-medium text-gray-600">Price Source Reference</label>
+                                <input type="text" wire:model="costItemForm.price_source_reference" class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500">
+                            </div>
+                            <div class="md:col-span-2 flex items-center gap-2">
+                                <input id="is_manual_override" type="checkbox" wire:model="costItemForm.is_manual_override" class="rounded border-gray-300 text-amber-600 focus:ring-amber-500">
+                                <label for="is_manual_override" class="text-xs font-medium text-gray-700">Manual line total override</label>
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-600">Line Total</label>
+                                <input type="number" min="0" step="0.01" wire:model="costItemForm.line_total" @disabled(! $costItemForm['is_manual_override']) class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500 disabled:bg-gray-100">
+                                @error('costItemForm.line_total') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                                @if (! $costItemForm['is_manual_override'])
+                                    <p class="mt-1 text-xs text-gray-500">Auto-calculated from quantity × unit price.</p>
+                                @endif
+                            </div>
+                            <div class="md:col-span-2 flex flex-wrap gap-2">
+                                <button type="submit" class="inline-flex items-center rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700">
+                                    {{ $editingCostItemId ? 'Update Cost Item' : 'Add Cost Item' }}
+                                </button>
+                                @if ($editingCostItemId)
+                                    <button type="button" wire:click="cancelEditCostItem" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                        Cancel Edit
+                                    </button>
+                                @endif
+                            </div>
+                        </form>
+
+                        <div class="mt-5 space-y-4">
+                            @foreach ($this->scenarioLegs as $leg)
+                                <div class="rounded-md border border-gray-200 p-4">
+                                    <div class="flex flex-wrap items-center justify-between gap-3">
+                                        <p class="text-sm font-medium text-gray-800">
+                                            Leg #{{ $leg->sequence_no }} - {{ $leg->originLocation?->name ?? '-' }} to {{ $leg->destinationLocation?->name ?? '-' }}
+                                        </p>
+                                        <button type="button" wire:click="startCreateCostItem({{ $leg->id }})" class="inline-flex items-center rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                            Add Cost Item
+                                        </button>
+                                    </div>
+
+                                    @if ($leg->legCostItems->isEmpty())
+                                        <div class="mt-3 rounded-md border border-dashed border-gray-300 bg-gray-50 p-3 text-xs text-gray-600">
+                                            No cost items yet for this leg. Click "Add Cost Item" to begin.
+                                        </div>
+                                    @else
+                                        <div class="mt-3 overflow-x-auto">
+                                            <table class="min-w-full divide-y divide-gray-200 text-xs">
+                                                <thead class="bg-gray-50">
+                                                    <tr>
+                                                        <th class="px-2 py-2 text-left font-semibold text-gray-700">Item</th>
+                                                        <th class="px-2 py-2 text-left font-semibold text-gray-700">Category</th>
+                                                        <th class="px-2 py-2 text-left font-semibold text-gray-700">Vendor</th>
+                                                        <th class="px-2 py-2 text-right font-semibold text-gray-700">Qty</th>
+                                                        <th class="px-2 py-2 text-right font-semibold text-gray-700">Unit Price</th>
+                                                        <th class="px-2 py-2 text-right font-semibold text-gray-700">Line Total</th>
+                                                        <th class="px-2 py-2 text-right font-semibold text-gray-700">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-gray-100">
+                                                    @foreach ($leg->legCostItems as $item)
+                                                        <tr>
+                                                            <td class="px-2 py-2 text-gray-700">{{ $item->item_name }}</td>
+                                                            <td class="px-2 py-2 text-gray-700">{{ $item->costCategory?->name ?? '-' }}</td>
+                                                            <td class="px-2 py-2 text-gray-700">{{ $item->vendor?->name ?? '-' }}</td>
+                                                            <td class="px-2 py-2 text-right text-gray-700">{{ number_format((float) $item->quantity, 4) }} {{ $item->unit_name }}</td>
+                                                            <td class="px-2 py-2 text-right text-gray-700">{{ number_format((float) $item->unit_price, 2) }}</td>
+                                                            <td class="px-2 py-2 text-right font-medium text-gray-800">{{ number_format((float) $item->line_total, 2) }}</td>
+                                                            <td class="px-2 py-2 text-right">
+                                                                <div class="inline-flex items-center gap-2">
+                                                                    <button type="button" wire:click="editCostItem({{ $item->id }})" class="font-medium text-amber-700 hover:text-amber-900">Edit</button>
+                                                                    <button type="button" wire:click="deleteCostItem({{ $item->id }})" class="font-medium text-red-600 hover:text-red-800">Delete</button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
+                <div class="rounded-lg border border-dashed border-gray-300 bg-white p-5 shadow-sm">
+                    <h3 class="text-sm font-semibold text-gray-900">Pricing Summary</h3>
+                    <p class="mt-2 text-sm text-gray-600">Pricing summary and calculations will be added next.</p>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
