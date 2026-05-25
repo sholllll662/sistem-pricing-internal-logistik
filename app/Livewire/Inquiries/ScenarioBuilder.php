@@ -11,6 +11,7 @@ use App\Models\ScenarioLeg;
 use App\Models\TransportMode;
 use App\Models\VehicleType;
 use App\Models\Vendor;
+use App\Services\Pricing\PricingCalculationService;
 use Illuminate\View\View;
 use Livewire\Component;
 
@@ -125,6 +126,7 @@ class ScenarioBuilder extends Component
         $this->editingLegId = null;
         $this->resetLegForm();
         $this->inquiry->load('inquiryScenarios');
+        app(PricingCalculationService::class)->refreshSnapshots($this->activeScenario);
     }
 
     public function editLeg(int $legId): void
@@ -167,6 +169,9 @@ class ScenarioBuilder extends Component
         }
 
         $this->inquiry->load('inquiryScenarios');
+        if ($this->activeScenario) {
+            app(PricingCalculationService::class)->refreshSnapshots($this->activeScenario);
+        }
     }
 
     public function cancelEditLeg(): void
@@ -208,10 +213,14 @@ class ScenarioBuilder extends Component
             return;
         }
 
-        $calculatedLineTotal = (float) $payload['quantity'] * (float) $payload['unit_price'];
+        $pricingService = app(PricingCalculationService::class);
+        $calculatedLineTotal = $pricingService->calculateLineTotal(
+            (float) $payload['quantity'],
+            (float) $payload['unit_price']
+        );
         $payload['line_total'] = $payload['is_manual_override']
             ? (float) ($payload['line_total'] ?? 0)
-            : round($calculatedLineTotal, 2);
+            : $calculatedLineTotal;
 
         if ($this->editingCostItemId) {
             LegCostItem::query()
@@ -224,6 +233,7 @@ class ScenarioBuilder extends Component
 
         $this->editingCostItemId = null;
         $this->resetCostItemForm();
+        app(PricingCalculationService::class)->refreshSnapshots($this->activeScenario);
     }
 
     public function startCreateCostItem(int $legId): void
@@ -288,6 +298,8 @@ class ScenarioBuilder extends Component
             $this->editingCostItemId = null;
             $this->resetCostItemForm();
         }
+
+        app(PricingCalculationService::class)->refreshSnapshots($this->activeScenario);
     }
 
     public function cancelEditCostItem(): void
