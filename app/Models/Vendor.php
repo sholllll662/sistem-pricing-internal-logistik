@@ -27,4 +27,9 @@ class Vendor extends Model
     {
         return $this->hasMany(VendorContact::class);
     }
+
+    public function legCostItems(): HasMany
+    {
+        return $this->hasMany(LegCostItem::class);
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ScenarioLeg extends Model
 {
@@ -74,5 +75,10 @@ class ScenarioLeg extends Model
     public function primaryVendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class, 'primary_vendor_id');
+    }
+
+    public function legCostItems(): HasMany
+    {
+        return $this->hasMany(LegCostItem::class, 'leg_id');
     }
 }
