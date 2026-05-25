@@ -4,7 +4,9 @@ namespace App\Livewire\Inquiries;
 
 use App\Models\Inquiry;
 use App\Models\InquiryScenario;
+use App\Models\LegCostItem;
 use App\Models\Location;
+use App\Models\CostCategory;
 use App\Models\ScenarioLeg;
 use App\Models\TransportMode;
 use App\Models\VehicleType;
@@ -24,6 +26,10 @@ class ScenarioBuilder extends Component
 
     public array $legForm = [];
 
+    public ?int $editingCostItemId = null;
+
+    public array $costItemForm = [];
+
     public function mount(Inquiry $inquiry): void
     {
         $this->inquiry = $inquiry->load([
@@ -40,6 +46,7 @@ class ScenarioBuilder extends Component
             ?? $this->inquiry->inquiryScenarios->first()?->id;
 
         $this->resetLegForm();
+        $this->resetCostItemForm();
     }
 
     public function createScenario(): void
@@ -80,7 +87,9 @@ class ScenarioBuilder extends Component
         $this->activeScenarioId = $scenarioId;
         $this->inquiry->load('inquiryScenarios');
         $this->editingLegId = null;
+        $this->editingCostItemId = null;
         $this->resetLegForm();
+        $this->resetCostItemForm();
     }
 
     public function saveLeg(): void
@@ -166,6 +175,127 @@ class ScenarioBuilder extends Component
         $this->resetLegForm();
     }
 
+    public function saveCostItem(): void
+    {
+        if (! $this->activeScenario) {
+            return;
+        }
+
+        $validated = $this->validate([
+            'costItemForm.leg_id' => ['required', 'integer', 'exists:scenario_legs,id'],
+            'costItemForm.cost_category_id' => ['required', 'integer', 'exists:cost_categories,id'],
+            'costItemForm.vendor_id' => ['nullable', 'integer', 'exists:vendors,id'],
+            'costItemForm.item_name' => ['required', 'string', 'max:255'],
+            'costItemForm.description' => ['nullable', 'string'],
+            'costItemForm.quantity' => ['required', 'numeric', 'min:0'],
+            'costItemForm.unit_name' => ['nullable', 'string', 'max:100'],
+            'costItemForm.unit_price' => ['required', 'numeric', 'min:0'],
+            'costItemForm.line_total' => ['nullable', 'numeric', 'min:0'],
+            'costItemForm.price_source_date' => ['nullable', 'date'],
+            'costItemForm.price_source_reference' => ['nullable', 'string', 'max:255'],
+            'costItemForm.is_manual_override' => ['required', 'boolean'],
+        ]);
+
+        $payload = $validated['costItemForm'];
+
+        $belongsToActiveScenario = $this->activeScenario->scenarioLegs()
+            ->whereKey($payload['leg_id'])
+            ->exists();
+
+        if (! $belongsToActiveScenario) {
+            $this->addError('costItemForm.leg_id', 'Selected leg is not part of active scenario.');
+
+            return;
+        }
+
+        $calculatedLineTotal = (float) $payload['quantity'] * (float) $payload['unit_price'];
+        $payload['line_total'] = $payload['is_manual_override']
+            ? (float) ($payload['line_total'] ?? 0)
+            : round($calculatedLineTotal, 2);
+
+        if ($this->editingCostItemId) {
+            LegCostItem::query()
+                ->whereKey($this->editingCostItemId)
+                ->whereIn('leg_id', $this->activeScenario->scenarioLegs()->pluck('id'))
+                ->update($payload);
+        } else {
+            LegCostItem::query()->create($payload);
+        }
+
+        $this->editingCostItemId = null;
+        $this->resetCostItemForm();
+    }
+
+    public function startCreateCostItem(int $legId): void
+    {
+        if (! $this->activeScenario) {
+            return;
+        }
+
+        $exists = $this->activeScenario->scenarioLegs()->whereKey($legId)->exists();
+        if (! $exists) {
+            return;
+        }
+
+        $this->editingCostItemId = null;
+        $this->resetCostItemForm($legId);
+    }
+
+    public function editCostItem(int $costItemId): void
+    {
+        if (! $this->activeScenario) {
+            return;
+        }
+
+        $costItem = LegCostItem::query()
+            ->whereKey($costItemId)
+            ->whereIn('leg_id', $this->activeScenario->scenarioLegs()->pluck('id'))
+            ->first();
+
+        if (! $costItem) {
+            return;
+        }
+
+        $this->editingCostItemId = $costItem->id;
+        $this->costItemForm = [
+            'leg_id' => $costItem->leg_id,
+            'cost_category_id' => $costItem->cost_category_id,
+            'vendor_id' => $costItem->vendor_id,
+            'item_name' => $costItem->item_name,
+            'description' => $costItem->description ?? '',
+            'quantity' => $costItem->quantity,
+            'unit_name' => $costItem->unit_name ?? '',
+            'unit_price' => $costItem->unit_price,
+            'line_total' => $costItem->line_total,
+            'price_source_date' => $costItem->price_source_date?->format('Y-m-d'),
+            'price_source_reference' => $costItem->price_source_reference ?? '',
+            'is_manual_override' => (bool) $costItem->is_manual_override,
+        ];
+    }
+
+    public function deleteCostItem(int $costItemId): void
+    {
+        if (! $this->activeScenario) {
+            return;
+        }
+
+        LegCostItem::query()
+            ->whereKey($costItemId)
+            ->whereIn('leg_id', $this->activeScenario->scenarioLegs()->pluck('id'))
+            ->delete();
+
+        if ($this->editingCostItemId === $costItemId) {
+            $this->editingCostItemId = null;
+            $this->resetCostItemForm();
+        }
+    }
+
+    public function cancelEditCostItem(): void
+    {
+        $this->editingCostItemId = null;
+        $this->resetCostItemForm();
+    }
+
     public function getScenariosProperty()
     {
         return $this->inquiry->inquiryScenarios()->orderBy('id')->get();
@@ -183,10 +313,23 @@ class ScenarioBuilder extends Component
         }
 
         return $this->activeScenario->scenarioLegs()
-            ->with(['originLocation', 'destinationLocation', 'transportMode', 'vehicleType', 'primaryVendor'])
+            ->with([
+                'originLocation',
+                'destinationLocation',
+                'transportMode',
+                'vehicleType',
+                'primaryVendor',
+                'legCostItems.costCategory',
+                'legCostItems.vendor',
+            ])
             ->orderBy('sequence_no')
             ->orderBy('id')
             ->get();
+    }
+
+    public function getCostCategoryOptionsProperty(): array
+    {
+        return CostCategory::query()->orderBy('name')->pluck('name', 'id')->all();
     }
 
     public function getLocationOptionsProperty(): array
@@ -228,6 +371,29 @@ class ScenarioBuilder extends Component
             'distance_notes' => '',
             'lead_time_notes' => '',
             'operation_notes' => '',
+        ];
+    }
+
+    private function resetCostItemForm(?int $legId = null): void
+    {
+        $defaultLegId = $legId;
+        if (! $defaultLegId && $this->activeScenario) {
+            $defaultLegId = $this->activeScenario->scenarioLegs()->orderBy('sequence_no')->value('id');
+        }
+
+        $this->costItemForm = [
+            'leg_id' => $defaultLegId,
+            'cost_category_id' => null,
+            'vendor_id' => null,
+            'item_name' => '',
+            'description' => '',
+            'quantity' => 1,
+            'unit_name' => '',
+            'unit_price' => 0,
+            'line_total' => 0,
+            'price_source_date' => null,
+            'price_source_reference' => '',
+            'is_manual_override' => false,
         ];
     }
 
