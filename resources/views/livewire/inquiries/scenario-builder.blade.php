@@ -64,9 +64,12 @@
                     @enderror
                     <button
                         type="submit"
+                        wire:loading.attr="disabled"
+                        wire:target="createScenario"
                         class="inline-flex items-center rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700"
                     >
-                        Create Scenario
+                        <span wire:loading.remove wire:target="createScenario">Create Scenario</span>
+                        <span wire:loading wire:target="createScenario">Creating...</span>
                     </button>
                 </form>
             </div>
@@ -174,14 +177,18 @@
                             </div>
 
                             <div class="md:col-span-2 flex flex-wrap gap-2">
-                                <button type="submit" class="inline-flex items-center rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700">
-                                    {{ $editingLegId ? 'Update Leg' : 'Add Leg' }}
+                                <button type="submit" wire:loading.attr="disabled" wire:target="saveLeg" class="inline-flex items-center rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-60">
+                                    <span wire:loading.remove wire:target="saveLeg">{{ $editingLegId ? 'Update Leg' : 'Add Leg' }}</span>
+                                    <span wire:loading wire:target="saveLeg">Saving leg...</span>
                                 </button>
                                 @if ($editingLegId)
                                     <button type="button" wire:click="cancelEditLeg" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                                         Cancel Edit
                                     </button>
                                 @endif
+                            </div>
+                            <div class="md:col-span-2" wire:loading.delay.short wire:target="saveLeg,deleteLeg,editLeg,cancelEditLeg">
+                                <p class="text-xs text-gray-500">Updating leg data...</p>
                             </div>
                         </form>
 
@@ -236,7 +243,9 @@
                     </div>
 
                     @if (! $this->activeScenario || $this->scenarioLegs->isEmpty())
-                        <p class="mt-2 text-sm text-gray-600">Add a leg first before entering cost items.</p>
+                        <div class="mt-3 rounded-md border border-dashed border-gray-300 bg-gray-50 p-3 text-sm text-gray-600">
+                            Add a leg first before entering cost items.
+                        </div>
                     @else
                         <form wire:submit="saveCostItem" class="mt-4 grid gap-3 md:grid-cols-2">
                             <div>
@@ -312,14 +321,18 @@
                                 @endif
                             </div>
                             <div class="md:col-span-2 flex flex-wrap gap-2">
-                                <button type="submit" class="inline-flex items-center rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700">
-                                    {{ $editingCostItemId ? 'Update Cost Item' : 'Add Cost Item' }}
+                                <button type="submit" wire:loading.attr="disabled" wire:target="saveCostItem" class="inline-flex items-center rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-60">
+                                    <span wire:loading.remove wire:target="saveCostItem">{{ $editingCostItemId ? 'Update Cost Item' : 'Add Cost Item' }}</span>
+                                    <span wire:loading wire:target="saveCostItem">Saving cost item...</span>
                                 </button>
                                 @if ($editingCostItemId)
                                     <button type="button" wire:click="cancelEditCostItem" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                                         Cancel Edit
                                     </button>
                                 @endif
+                            </div>
+                            <div class="md:col-span-2" wire:loading.delay.short wire:target="saveCostItem,deleteCostItem,editCostItem,startCreateCostItem,cancelEditCostItem">
+                                <p class="text-xs text-gray-500">Updating cost item data...</p>
                             </div>
                         </form>
 
@@ -409,9 +422,12 @@
                         <button
                             type="button"
                             wire:click="createQuoteDraft"
-                            class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                            wire:loading.attr="disabled"
+                            wire:target="createQuoteDraft"
+                            class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
                         >
-                            Create Quote Draft
+                            <span wire:loading.remove wire:target="createQuoteDraft">Create Quote Draft</span>
+                            <span wire:loading wire:target="createQuoteDraft">Creating draft...</span>
                         </button>
                         @if ($lastCreatedQuoteId)
                             <span class="text-xs text-gray-600">Last draft ID: #{{ $lastCreatedQuoteId }}</span>
@@ -428,6 +444,9 @@
                             {{ $message }}
                         </div>
                     @enderror
+                    <div wire:loading.delay.short wire:target="createQuoteDraft" class="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+                        Processing draft request. Please wait...
+                    </div>
 
                     @if ($this->pricingSummary['state'] === 'empty')
                         <p class="mt-2 text-sm text-gray-600">{{ $this->pricingSummary['message'] }}</p>

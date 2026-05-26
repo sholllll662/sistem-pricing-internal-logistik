@@ -124,7 +124,8 @@ class QuoteHistoriesTable
                     ->url(fn (Quote $record): string => route('filament.admin.resources.inquiries.edit', ['record' => $record->inquiry_id])),
             ])
             ->emptyStateHeading('No quote history yet')
-            ->emptyStateDescription('Quotes will appear here after they are created.');
+            ->emptyStateDescription('Quotes will appear here after they are created. If filters are active, clear them to see all records.')
+            ->emptyStateIcon('heroicon-o-clock');
     }
 
     private static function routeOptions(): array

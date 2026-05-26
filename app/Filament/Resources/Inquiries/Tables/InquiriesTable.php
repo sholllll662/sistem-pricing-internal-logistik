@@ -70,6 +70,9 @@ class InquiriesTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->emptyStateHeading('No inquiries yet')
+            ->emptyStateDescription('Create an inquiry first, then continue to Scenario Builder to prepare pricing.')
+            ->emptyStateIcon('heroicon-o-document-plus');
     }
 }

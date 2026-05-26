@@ -92,6 +92,7 @@ class QuotesTable
                     ->url(fn (Quote $record): string => route('quotes.review', ['quote' => $record->id])),
             ])
             ->emptyStateHeading('No quotes waiting approval')
-            ->emptyStateDescription('Quote drafts with approval status waiting_approval will appear here.');
+            ->emptyStateDescription('Waiting approval quotes will appear here. If you are filtering, try clearing filters.')
+            ->emptyStateIcon('heroicon-o-inbox');
     }
 }

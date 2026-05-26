@@ -30,6 +30,7 @@ class InquiryForm
                     ->searchable()
                     ->preload()
                     ->live()
+                    ->helperText('Select customer first so pickup/drop contacts can be loaded.')
                     ->required(),
                 Select::make('sales_owner_id')
                     ->relationship('salesOwner', 'name')
@@ -43,6 +44,7 @@ class InquiryForm
                         ->pluck('name', 'id')
                         ->all())
                     ->searchable()
+                    ->helperText('If empty, add customer contact data first.')
                     ->required(),
                 Select::make('drop_contact_id')
                     ->options(fn (Get $get): array => CustomerContact::query()
@@ -51,6 +53,7 @@ class InquiryForm
                         ->pluck('name', 'id')
                         ->all())
                     ->searchable()
+                    ->helperText('If empty, add customer contact data first.')
                     ->required(),
                 Select::make('origin_location_id')
                     ->relationship('originLocation', 'name')
@@ -103,4 +106,3 @@ class InquiryForm
             ]);
     }
 }
-
