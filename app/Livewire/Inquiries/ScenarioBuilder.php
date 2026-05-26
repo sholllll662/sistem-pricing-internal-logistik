@@ -364,6 +364,47 @@ class ScenarioBuilder extends Component
         return Vendor::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id')->all();
     }
 
+    public function getPricingSummaryProperty(): array
+    {
+        if (! $this->activeScenario) {
+            return [
+                'state' => 'empty',
+                'message' => 'Select a scenario to see pricing summary.',
+                'data' => null,
+            ];
+        }
+
+        if ($this->scenarioLegs->isEmpty()) {
+            return [
+                'state' => 'empty',
+                'message' => 'Add at least one leg to generate pricing summary.',
+                'data' => null,
+            ];
+        }
+
+        $hasIncompleteLeg = $this->scenarioLegs->contains(fn ($leg) => $leg->legCostItems->isEmpty());
+
+        $summary = app(PricingCalculationService::class)->calculateScenario(
+            $this->activeScenario,
+            (float) $this->activeScenario->total_margin_snapshot,
+            0
+        );
+
+        if ($hasIncompleteLeg) {
+            return [
+                'state' => 'incomplete',
+                'message' => 'Some legs do not have cost items yet. Add cost items to complete the summary.',
+                'data' => $summary,
+            ];
+        }
+
+        return [
+            'state' => 'ready',
+            'message' => null,
+            'data' => $summary,
+        ];
+    }
+
     private function resetLegForm(): void
     {
         $nextSequenceNo = 1;

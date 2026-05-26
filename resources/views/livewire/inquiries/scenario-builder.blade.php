@@ -1,4 +1,4 @@
-<div class="py-8">
+ï»¿<div class="py-8">
     <div class="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
         <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <div class="flex flex-wrap items-start justify-between gap-4">
@@ -44,7 +44,7 @@
                                 class="w-full rounded-md border px-3 py-2 text-left text-sm transition {{ $activeScenarioId === $scenario->id ? 'border-amber-400 bg-amber-50 text-amber-900' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50' }}"
                             >
                                 <p class="font-medium">{{ $scenario->scenario_name }}</p>
-                                <p class="text-xs opacity-80">{{ $scenario->scenario_code }} · {{ $scenario->status }}</p>
+                                <p class="text-xs opacity-80">{{ $scenario->scenario_code }} Â· {{ $scenario->status }}</p>
                             </button>
                         @endforeach
                     </div>
@@ -308,7 +308,7 @@
                                 <input type="number" min="0" step="0.01" wire:model="costItemForm.line_total" @disabled(! $costItemForm['is_manual_override']) class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500 disabled:bg-gray-100">
                                 @error('costItemForm.line_total') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                                 @if (! $costItemForm['is_manual_override'])
-                                    <p class="mt-1 text-xs text-gray-500">Auto-calculated from quantity × unit price.</p>
+                                    <p class="mt-1 text-xs text-gray-500">Auto-calculated from quantity Ã— unit price.</p>
                                 @endif
                             </div>
                             <div class="md:col-span-2 flex flex-wrap gap-2">
@@ -380,11 +380,68 @@
                     @endif
                 </div>
 
-                <div class="rounded-lg border border-dashed border-gray-300 bg-white p-5 shadow-sm">
-                    <h3 class="text-sm font-semibold text-gray-900">Pricing Summary</h3>
-                    <p class="mt-2 text-sm text-gray-600">Pricing summary and calculations will be added next.</p>
+                <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-gray-900">Pricing Summary</h3>
+                        @if ($this->pricingSummary['state'] === 'ready')
+                            <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">Complete</span>
+                        @elseif ($this->pricingSummary['state'] === 'incomplete')
+                            <span class="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">Incomplete</span>
+                        @else
+                            <span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">Empty</span>
+                        @endif
+                    </div>
+
+                    @if ($this->pricingSummary['state'] === 'empty')
+                        <p class="mt-2 text-sm text-gray-600">{{ $this->pricingSummary['message'] }}</p>
+                    @else
+                        @if ($this->pricingSummary['message'])
+                            <div class="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                                {{ $this->pricingSummary['message'] }}
+                            </div>
+                        @endif
+
+                        <div class="mt-4 overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Leg</th>
+                                        <th class="px-3 py-2 text-right font-semibold text-gray-700">Base Cost</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    @foreach ($this->pricingSummary['data']['legs'] as $legSummary)
+                                        <tr>
+                                            <td class="px-3 py-2 text-gray-700">Leg #{{ $legSummary['sequence_no'] }}</td>
+                                            <td class="px-3 py-2 text-right text-gray-700">{{ number_format((float) $legSummary['base_cost'], 2) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-4 grid gap-3 text-sm md:grid-cols-2">
+                            <div class="rounded-md border border-gray-200 bg-gray-50 p-3">
+                                <p class="text-xs text-gray-600">Scenario Base Cost</p>
+                                <p class="mt-1 font-semibold text-gray-900">{{ number_format((float) $this->pricingSummary['data']['scenario_base_cost'], 2) }}</p>
+                            </div>
+                            <div class="rounded-md border border-gray-200 bg-gray-50 p-3">
+                                <p class="text-xs text-gray-600">Margin</p>
+                                <p class="mt-1 font-semibold text-gray-900">{{ number_format((float) $this->pricingSummary['data']['margin_nominal'], 2) }}</p>
+                            </div>
+                            <div class="rounded-md border border-gray-200 bg-gray-50 p-3">
+                                <p class="text-xs text-gray-600">Surcharge</p>
+                                <p class="mt-1 font-semibold text-gray-900">{{ number_format((float) $this->pricingSummary['data']['surcharge_nominal'], 2) }}</p>
+                            </div>
+                            <div class="rounded-md border border-amber-200 bg-amber-50 p-3">
+                                <p class="text-xs text-amber-700">Base Selling Price</p>
+                                <p class="mt-1 font-semibold text-amber-900">{{ number_format((float) $this->pricingSummary['data']['selling_price'], 2) }}</p>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
     </div>
 </div>
+
