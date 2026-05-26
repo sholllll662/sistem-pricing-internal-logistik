@@ -7,11 +7,13 @@ use App\Models\InquiryScenario;
 use App\Models\LegCostItem;
 use App\Models\Location;
 use App\Models\CostCategory;
+use App\Models\Quote;
 use App\Models\ScenarioLeg;
 use App\Models\TransportMode;
 use App\Models\VehicleType;
 use App\Models\Vendor;
 use App\Services\Pricing\PricingCalculationService;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 use Livewire\Component;
 
@@ -30,6 +32,8 @@ class ScenarioBuilder extends Component
     public ?int $editingCostItemId = null;
 
     public array $costItemForm = [];
+
+    public ?int $lastCreatedQuoteId = null;
 
     public function mount(Inquiry $inquiry): void
     {
@@ -308,6 +312,66 @@ class ScenarioBuilder extends Component
         $this->resetCostItemForm();
     }
 
+    public function createQuoteDraft(): void
+    {
+        if (! $this->activeScenario) {
+            $this->addError('quoteDraft', 'Select an active scenario first.');
+
+            return;
+        }
+
+        if ($this->scenarioLegs->isEmpty()) {
+            $this->addError('quoteDraft', 'Cannot create quote draft because the scenario has no legs.');
+
+            return;
+        }
+
+        $hasIncompleteLeg = $this->scenarioLegs->contains(fn ($leg) => $leg->legCostItems->isEmpty());
+        if ($hasIncompleteLeg) {
+            $this->addError('quoteDraft', 'Cannot create quote draft because some legs do not have cost items.');
+
+            return;
+        }
+
+        $userId = auth()->id();
+        if (! $userId) {
+            $this->addError('quoteDraft', 'You must be logged in to create quote draft.');
+
+            return;
+        }
+
+        $summary = app(PricingCalculationService::class)->calculateScenario(
+            $this->activeScenario,
+            (float) $this->activeScenario->total_margin_snapshot,
+            0
+        );
+
+        if (($summary['scenario_base_cost'] ?? 0) <= 0) {
+            $this->addError('quoteDraft', 'Cannot create quote draft because scenario base cost is zero.');
+
+            return;
+        }
+
+        $today = Carbon::today();
+        $quote = Quote::query()->create([
+            'quote_number' => $this->generateQuoteNumber(),
+            'inquiry_id' => $this->inquiry->id,
+            'scenario_id' => $this->activeScenario->id,
+            'prepared_by_user_id' => $userId,
+            'valid_from' => $today,
+            'valid_until' => $today->copy()->addDays(30),
+            'total_base_cost_snapshot' => $summary['scenario_base_cost'],
+            'total_margin_snapshot' => $summary['margin_nominal'],
+            'total_selling_price_snapshot' => $summary['selling_price'],
+            'status' => Quote::STATUS_DRAFT,
+            'approval_status' => Quote::STATUS_DRAFT,
+        ]);
+
+        $this->resetErrorBag('quoteDraft');
+        $this->lastCreatedQuoteId = $quote->id;
+        session()->flash('quoteDraftSuccess', "Quote draft {$quote->quote_number} created successfully.");
+    }
+
     public function getScenariosProperty()
     {
         return $this->inquiry->inquiryScenarios()->orderBy('id')->get();
@@ -448,6 +512,23 @@ class ScenarioBuilder extends Component
             'price_source_reference' => '',
             'is_manual_override' => false,
         ];
+    }
+
+    private function generateQuoteNumber(): string
+    {
+        $prefix = 'Q-'.now()->format('Ymd');
+        $lastQuoteNumber = Quote::query()
+            ->where('quote_number', 'like', $prefix.'-%')
+            ->orderByDesc('id')
+            ->value('quote_number');
+
+        $nextSequence = 1;
+        if ($lastQuoteNumber) {
+            $lastSequence = (int) substr($lastQuoteNumber, -4);
+            $nextSequence = $lastSequence + 1;
+        }
+
+        return sprintf('%s-%04d', $prefix, $nextSequence);
     }
 
     public function render(): View
