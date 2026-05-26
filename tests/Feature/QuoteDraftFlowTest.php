@@ -65,6 +65,8 @@ class QuoteDraftFlowTest extends TestCase
         $this->assertSame(Quote::STATUS_DRAFT, $quote->status);
         $this->assertSame('300000.00', (string) $quote->total_base_cost_snapshot);
         $this->assertSame('300000.00', (string) $quote->total_selling_price_snapshot);
+        $this->assertSame(now()->startOfDay()->format('Y-m-d'), $quote->valid_from->format('Y-m-d'));
+        $this->assertSame(now()->startOfDay()->addMonths(3)->format('Y-m-d'), $quote->valid_until->format('Y-m-d'));
     }
 
     public function test_quote_draft_is_rejected_for_incomplete_scenario(): void
@@ -89,6 +91,49 @@ class QuoteDraftFlowTest extends TestCase
             ->test(ScenarioBuilder::class, ['inquiry' => $inquiry])
             ->call('createQuoteDraft')
             ->assertHasErrors(['quoteDraft']);
+
+        $this->assertDatabaseCount('quotes', 0);
+    }
+
+    public function test_quote_draft_is_rejected_if_valid_until_is_before_valid_from(): void
+    {
+        $user = User::factory()->create();
+        $inquiry = $this->createInquiry($user);
+        $scenario = InquiryScenario::query()->create([
+            'inquiry_id' => $inquiry->id,
+            'scenario_code' => 'SCN-001',
+            'scenario_name' => 'Scenario A',
+            'status' => InquiryScenario::STATUS_DRAFT,
+            'is_selected' => true,
+        ]);
+
+        $leg = ScenarioLeg::query()->create([
+            'scenario_id' => $scenario->id,
+            'sequence_no' => 1,
+            'leg_type' => ScenarioLeg::TYPE_FIRST_MILE,
+        ]);
+
+        $category = CostCategory::query()->create([
+            'code' => 'TRK',
+            'name' => 'Trucking',
+        ]);
+
+        LegCostItem::query()->create([
+            'leg_id' => $leg->id,
+            'cost_category_id' => $category->id,
+            'item_name' => 'Pickup truck',
+            'quantity' => 1,
+            'unit_price' => 100000,
+            'line_total' => 0,
+            'is_manual_override' => false,
+        ]);
+
+        Livewire::actingAs($user)
+            ->test(ScenarioBuilder::class, ['inquiry' => $inquiry])
+            ->set('quoteValidityForm.valid_from', '2026-01-10')
+            ->set('quoteValidityForm.valid_until', '2026-01-09')
+            ->call('createQuoteDraft')
+            ->assertHasErrors(['quoteValidityForm.valid_until']);
 
         $this->assertDatabaseCount('quotes', 0);
     }

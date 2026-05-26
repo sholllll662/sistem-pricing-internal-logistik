@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 class Quote extends Model
 {
@@ -76,5 +77,29 @@ class Quote extends Model
     public function preparedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'prepared_by_user_id');
+    }
+
+    public static function defaultValidFrom(): Carbon
+    {
+        return Carbon::today();
+    }
+
+    public static function defaultValidUntil(?Carbon $validFrom = null): Carbon
+    {
+        $from = $validFrom ? $validFrom->copy() : self::defaultValidFrom();
+
+        return $from->copy()->addMonths(3);
+    }
+
+    public static function isValidityRangeAllowed(Carbon $validFrom, Carbon $validUntil): bool
+    {
+        if ($validUntil->lt($validFrom)) {
+            return false;
+        }
+
+        $minimum = $validFrom->copy()->addMonths(3);
+        $maximum = $validFrom->copy()->addMonths(6);
+
+        return $validUntil->betweenIncluded($minimum, $maximum);
     }
 }
