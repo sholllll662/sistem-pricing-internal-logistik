@@ -89,7 +89,7 @@ class QuotesTable
                 Action::make('review')
                     ->label('Review')
                     ->icon('heroicon-o-eye')
-                    ->url(fn (Quote $record): string => route('filament.admin.resources.inquiries.edit', ['record' => $record->inquiry_id])),
+                    ->url(fn (Quote $record): string => route('quotes.review', ['quote' => $record->id])),
             ])
             ->emptyStateHeading('No quotes waiting approval')
             ->emptyStateDescription('Quote drafts with approval status waiting_approval will appear here.');
