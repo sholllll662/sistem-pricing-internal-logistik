@@ -57,4 +57,9 @@ class InquiryScenario extends Model
     {
         return $this->hasMany(ScenarioLeg::class, 'scenario_id');
     }
+
+    public function quotes(): HasMany
+    {
+        return $this->hasMany(Quote::class, 'scenario_id');
+    }
 }

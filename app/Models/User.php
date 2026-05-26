@@ -8,6 +8,7 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Gate;
@@ -64,5 +65,10 @@ class User extends Authenticatable implements FilamentUser
     public function hasRole(string $code): bool
     {
         return $this->roles()->where('code', $code)->exists();
+    }
+
+    public function preparedQuotes(): HasMany
+    {
+        return $this->hasMany(Quote::class, 'prepared_by_user_id');
     }
 }

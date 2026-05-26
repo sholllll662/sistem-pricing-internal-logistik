@@ -94,4 +94,9 @@ class Inquiry extends Model
     {
         return $this->hasMany(InquiryScenario::class);
     }
+
+    public function quotes(): HasMany
+    {
+        return $this->hasMany(Quote::class);
+    }
 }
