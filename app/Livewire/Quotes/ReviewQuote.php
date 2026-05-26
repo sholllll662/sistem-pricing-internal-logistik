@@ -31,8 +31,18 @@ class ReviewQuote extends Component
     public function approve(): void
     {
         abort_unless(auth()->user()?->hasRole('manager'), 403);
-        if ($this->quote->approval_status !== Quote::STATUS_WAITING_APPROVAL) {
-            $this->addError('decision', 'Quote is not in waiting approval status.');
+        if (! $this->canDecideApproval()) {
+            return;
+        }
+
+        if ($this->quote->valid_until->isBefore(Carbon::today())) {
+            $this->addError('decision', 'Quote validity has expired and cannot be approved.');
+
+            return;
+        }
+
+        if ((float) $this->quote->total_selling_price_snapshot < (float) $this->quote->total_base_cost_snapshot) {
+            $this->addError('decision', 'Quote selling price snapshot is below base cost and cannot be approved.');
 
             return;
         }
@@ -73,9 +83,7 @@ class ReviewQuote extends Component
     public function reject(): void
     {
         abort_unless(auth()->user()?->hasRole('manager'), 403);
-        if ($this->quote->approval_status !== Quote::STATUS_WAITING_APPROVAL) {
-            $this->addError('decision', 'Quote is not in waiting approval status.');
-
+        if (! $this->canDecideApproval()) {
             return;
         }
 
@@ -125,5 +133,33 @@ class ReviewQuote extends Component
     {
         return view('livewire.quotes.review-quote')
             ->layout('layouts.app');
+    }
+
+    private function canDecideApproval(): bool
+    {
+        if (
+            $this->quote->approval_status !== Quote::STATUS_WAITING_APPROVAL
+            || $this->quote->status !== Quote::STATUS_WAITING_APPROVAL
+        ) {
+            $this->addError('decision', 'Quote is not in waiting approval status.');
+
+            return false;
+        }
+
+        $alreadyDecided = QuoteApproval::query()
+            ->where('quote_id', $this->quote->id)
+            ->whereIn('decision', [
+                QuoteApproval::DECISION_APPROVED,
+                QuoteApproval::DECISION_REJECTED,
+            ])
+            ->exists();
+
+        if ($alreadyDecided) {
+            $this->addError('decision', 'Quote approval decision has already been made.');
+
+            return false;
+        }
+
+        return true;
     }
 }
