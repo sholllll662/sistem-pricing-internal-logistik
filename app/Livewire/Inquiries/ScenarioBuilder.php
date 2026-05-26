@@ -356,6 +356,12 @@ class ScenarioBuilder extends Component
             return;
         }
 
+        if (($summary['selling_price'] ?? 0) < ($summary['scenario_base_cost'] ?? 0)) {
+            $this->addError('quoteDraft', 'Cannot create quote draft because selling price is below base cost.');
+
+            return;
+        }
+
         $validated = $this->validate([
             'quoteValidityForm.valid_from' => ['required', 'date'],
             'quoteValidityForm.valid_until' => ['required', 'date', 'after_or_equal:quoteValidityForm.valid_from'],

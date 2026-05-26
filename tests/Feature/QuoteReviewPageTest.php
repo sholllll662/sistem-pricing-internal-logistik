@@ -101,6 +101,62 @@ class QuoteReviewPageTest extends TestCase
         ]);
     }
 
+    public function test_manager_cannot_approve_expired_quote(): void
+    {
+        [$manager, $quote] = $this->createManagerAndWaitingQuote();
+        $quote->update([
+            'valid_until' => now()->subDay()->toDateString(),
+        ]);
+
+        Livewire::actingAs($manager)
+            ->test(ReviewQuote::class, ['quote' => $quote->fresh()])
+            ->call('approve')
+            ->assertHasErrors(['decision']);
+
+        $this->assertDatabaseCount('quote_approvals', 0);
+        $quote->refresh();
+        $this->assertSame(Quote::STATUS_WAITING_APPROVAL, $quote->status);
+        $this->assertSame(Quote::STATUS_WAITING_APPROVAL, $quote->approval_status);
+    }
+
+    public function test_manager_cannot_decide_quote_twice(): void
+    {
+        [$manager, $quote] = $this->createManagerAndWaitingQuote();
+
+        QuoteApproval::query()->create([
+            'quote_id' => $quote->id,
+            'approver_user_id' => $manager->id,
+            'decision' => QuoteApproval::DECISION_APPROVED,
+            'decided_at' => now(),
+        ]);
+
+        Livewire::actingAs($manager)
+            ->test(ReviewQuote::class, ['quote' => $quote->fresh()])
+            ->call('reject')
+            ->assertHasErrors(['decision']);
+
+        $this->assertDatabaseCount('quote_approvals', 1);
+    }
+
+    public function test_manager_cannot_approve_when_selling_price_snapshot_is_below_base_cost(): void
+    {
+        [$manager, $quote] = $this->createManagerAndWaitingQuote();
+        $quote->update([
+            'total_base_cost_snapshot' => 150000,
+            'total_selling_price_snapshot' => 100000,
+        ]);
+
+        Livewire::actingAs($manager)
+            ->test(ReviewQuote::class, ['quote' => $quote->fresh()])
+            ->call('approve')
+            ->assertHasErrors(['decision']);
+
+        $this->assertDatabaseCount('quote_approvals', 0);
+        $quote->refresh();
+        $this->assertSame(Quote::STATUS_WAITING_APPROVAL, $quote->status);
+        $this->assertSame(Quote::STATUS_WAITING_APPROVAL, $quote->approval_status);
+    }
+
     private function createManagerAndWaitingQuote(): array
     {
         $manager = User::factory()->create();
