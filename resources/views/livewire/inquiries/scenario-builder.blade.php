@@ -392,6 +392,30 @@
                         @endif
                     </div>
 
+                    <div class="mt-3 flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            wire:click="createQuoteDraft"
+                            class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                        >
+                            Create Quote Draft
+                        </button>
+                        @if ($lastCreatedQuoteId)
+                            <span class="text-xs text-gray-600">Last draft ID: #{{ $lastCreatedQuoteId }}</span>
+                        @endif
+                    </div>
+
+                    @if (session('quoteDraftSuccess'))
+                        <div class="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                            {{ session('quoteDraftSuccess') }}
+                        </div>
+                    @endif
+                    @error('quoteDraft')
+                        <div class="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                            {{ $message }}
+                        </div>
+                    @enderror
+
                     @if ($this->pricingSummary['state'] === 'empty')
                         <p class="mt-2 text-sm text-gray-600">{{ $this->pricingSummary['message'] }}</p>
                     @else
