@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 class Quote extends Model
@@ -77,6 +78,11 @@ class Quote extends Model
     public function preparedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'prepared_by_user_id');
+    }
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(QuoteApproval::class);
     }
 
     public static function defaultValidFrom(): Carbon
