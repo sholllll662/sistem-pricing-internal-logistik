@@ -4,6 +4,7 @@ namespace App\Livewire\Quotes;
 
 use App\Models\Quote;
 use App\Models\QuoteApproval;
+use App\Services\Audit\AuditLogService;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 use Livewire\Component;
@@ -48,6 +49,22 @@ class ReviewQuote extends Component
             'approval_status' => Quote::STATUS_APPROVED,
         ]);
 
+        app(AuditLogService::class)->log(
+            auditable: $this->quote,
+            eventName: 'approval_decided',
+            oldValues: [
+                'status' => Quote::STATUS_WAITING_APPROVAL,
+                'approval_status' => Quote::STATUS_WAITING_APPROVAL,
+            ],
+            newValues: [
+                'status' => Quote::STATUS_APPROVED,
+                'approval_status' => Quote::STATUS_APPROVED,
+                'decision' => QuoteApproval::DECISION_APPROVED,
+            ],
+            changedByUserId: auth()->id(),
+            changedAt: Carbon::now(),
+        );
+
         $this->quote->refresh();
         $this->quote->load('approvals.approver');
         session()->flash('reviewSuccess', 'Quote approved successfully.');
@@ -80,6 +97,23 @@ class ReviewQuote extends Component
             'status' => Quote::STATUS_REJECTED,
             'approval_status' => Quote::STATUS_REJECTED,
         ]);
+
+        app(AuditLogService::class)->log(
+            auditable: $this->quote,
+            eventName: 'approval_decided',
+            oldValues: [
+                'status' => Quote::STATUS_WAITING_APPROVAL,
+                'approval_status' => Quote::STATUS_WAITING_APPROVAL,
+            ],
+            newValues: [
+                'status' => Quote::STATUS_REJECTED,
+                'approval_status' => Quote::STATUS_REJECTED,
+                'decision' => QuoteApproval::DECISION_REJECTED,
+                'decision_notes' => $validated['rejectNotes'],
+            ],
+            changedByUserId: auth()->id(),
+            changedAt: Carbon::now(),
+        );
 
         $this->rejectNotes = '';
         $this->quote->refresh();
