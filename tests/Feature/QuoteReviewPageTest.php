@@ -57,6 +57,12 @@ class QuoteReviewPageTest extends TestCase
             'approver_user_id' => $manager->id,
             'decision' => QuoteApproval::DECISION_APPROVED,
         ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'auditable_type' => Quote::class,
+            'auditable_id' => $quote->id,
+            'event_name' => 'approval_decided',
+            'changed_by_user_id' => $manager->id,
+        ]);
     }
 
     public function test_manager_must_provide_reject_reason(): void
@@ -70,6 +76,29 @@ class QuoteReviewPageTest extends TestCase
             ->assertHasErrors(['rejectNotes']);
 
         $this->assertDatabaseCount('quote_approvals', 0);
+    }
+
+    public function test_manager_reject_writes_approval_and_audit_log(): void
+    {
+        [$manager, $quote] = $this->createManagerAndWaitingQuote();
+
+        Livewire::actingAs($manager)
+            ->test(ReviewQuote::class, ['quote' => $quote])
+            ->set('rejectNotes', 'Price is above approved range')
+            ->call('reject')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('quote_approvals', [
+            'quote_id' => $quote->id,
+            'approver_user_id' => $manager->id,
+            'decision' => QuoteApproval::DECISION_REJECTED,
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'auditable_type' => Quote::class,
+            'auditable_id' => $quote->id,
+            'event_name' => 'approval_decided',
+            'changed_by_user_id' => $manager->id,
+        ]);
     }
 
     private function createManagerAndWaitingQuote(): array
