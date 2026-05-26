@@ -41,7 +41,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        if (! app()->environment(['local', 'development'])) {
+        if (! app()->environment(['local', 'development', 'uat'])) {
             return;
         }
 
@@ -54,5 +54,7 @@ class DatabaseSeeder extends Seeder
 
         $adminRole = $roles->get('admin');
         $adminUser->roles()->syncWithoutDetaching([$adminRole->id]);
+
+        $this->call(UatSeedDataSeeder::class);
     }
 }

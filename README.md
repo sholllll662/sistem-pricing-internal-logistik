@@ -55,7 +55,24 @@ Seeder menggunakan variabel env berikut:
 
 Ubah variabel ini di `.env` sebelum menjalankan `php artisan migrate --seed`.
 
+## Seed Data UAT
+
+Selain role dan admin bootstrap, seeder juga menyiapkan data UAT minimum:
+- user contoh role `sales`, `manager`, `admin`
+- master data utama (customer, contact, vendor, location, transport mode, vehicle type, cost category)
+- contoh transaksi (`INQ-UAT-0001`, `Q-UAT-0001`, `Q-UAT-0002`) untuk flow pricing, approval queue, dan history
+
+Kredensial default:
+- `sales.uat@example.com` / `password`
+- `manager.uat@example.com` / `password`
+- `admin.uat@example.com` / `password`
+
 Catatan:
 - role default yang akan dibuat: `sales`, `manager`, `admin`
-- admin bootstrap hanya dibuat otomatis pada environment `local` atau `development`
-- proses seeding idempotent (aman dijalankan berulang tanpa duplikasi role dan relasi admin)
+- seeder bootstrap + UAT aktif untuk environment `local`, `development`, dan `uat`
+- proses seeding idempotent (aman dijalankan berulang tanpa duplikasi data kunci)
+
+## Checklist UAT
+
+Panduan persiapan dan eksekusi UAT tersedia di:
+- `docs/uat-release-checklist.md`
