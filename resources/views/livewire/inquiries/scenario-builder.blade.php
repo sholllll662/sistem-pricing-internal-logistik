@@ -392,6 +392,19 @@
                         @endif
                     </div>
 
+                    <div class="mt-3 grid gap-3 md:grid-cols-2">
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Valid From</label>
+                            <input type="date" wire:model="quoteValidityForm.valid_from" class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            @error('quoteValidityForm.valid_from') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-gray-600">Valid Until</label>
+                            <input type="date" wire:model="quoteValidityForm.valid_until" class="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                            @error('quoteValidityForm.valid_until') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
                     <div class="mt-3 flex flex-wrap items-center gap-2">
                         <button
                             type="button"

@@ -35,6 +35,8 @@ class ScenarioBuilder extends Component
 
     public ?int $lastCreatedQuoteId = null;
 
+    public array $quoteValidityForm = [];
+
     public function mount(Inquiry $inquiry): void
     {
         $this->inquiry = $inquiry->load([
@@ -52,6 +54,7 @@ class ScenarioBuilder extends Component
 
         $this->resetLegForm();
         $this->resetCostItemForm();
+        $this->resetQuoteValidityForm();
     }
 
     public function createScenario(): void
@@ -95,6 +98,7 @@ class ScenarioBuilder extends Component
         $this->editingCostItemId = null;
         $this->resetLegForm();
         $this->resetCostItemForm();
+        $this->resetQuoteValidityForm();
     }
 
     public function saveLeg(): void
@@ -352,14 +356,29 @@ class ScenarioBuilder extends Component
             return;
         }
 
-        $today = Carbon::today();
+        $validated = $this->validate([
+            'quoteValidityForm.valid_from' => ['required', 'date'],
+            'quoteValidityForm.valid_until' => ['required', 'date', 'after_or_equal:quoteValidityForm.valid_from'],
+        ], [
+            'quoteValidityForm.valid_until.after_or_equal' => 'Valid until date must be the same as or later than valid from date.',
+        ]);
+
+        $validFrom = Carbon::parse($validated['quoteValidityForm']['valid_from'])->startOfDay();
+        $validUntil = Carbon::parse($validated['quoteValidityForm']['valid_until'])->startOfDay();
+
+        if (! Quote::isValidityRangeAllowed($validFrom, $validUntil)) {
+            $this->addError('quoteDraft', 'Validity period must be between 3 and 6 months from valid from date.');
+
+            return;
+        }
+
         $quote = Quote::query()->create([
             'quote_number' => $this->generateQuoteNumber(),
             'inquiry_id' => $this->inquiry->id,
             'scenario_id' => $this->activeScenario->id,
             'prepared_by_user_id' => $userId,
-            'valid_from' => $today,
-            'valid_until' => $today->copy()->addDays(30),
+            'valid_from' => $validFrom,
+            'valid_until' => $validUntil,
             'total_base_cost_snapshot' => $summary['scenario_base_cost'],
             'total_margin_snapshot' => $summary['margin_nominal'],
             'total_selling_price_snapshot' => $summary['selling_price'],
@@ -511,6 +530,17 @@ class ScenarioBuilder extends Component
             'price_source_date' => null,
             'price_source_reference' => '',
             'is_manual_override' => false,
+        ];
+    }
+
+    private function resetQuoteValidityForm(): void
+    {
+        $validFrom = Quote::defaultValidFrom();
+        $validUntil = Quote::defaultValidUntil($validFrom);
+
+        $this->quoteValidityForm = [
+            'valid_from' => $validFrom->format('Y-m-d'),
+            'valid_until' => $validUntil->format('Y-m-d'),
         ];
     }
 
