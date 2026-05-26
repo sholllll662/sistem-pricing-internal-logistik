@@ -18,7 +18,7 @@ class AdminPanelAccessTest extends TestCase
         $response->assertRedirect('/admin/login');
     }
 
-    public function test_authenticated_non_admin_user_is_forbidden_from_admin_panel(): void
+    public function test_authenticated_user_without_operational_role_is_forbidden_from_admin_panel(): void
     {
         $user = User::factory()->create();
 
@@ -38,6 +38,21 @@ class AdminPanelAccessTest extends TestCase
         $adminUser->roles()->attach($adminRole);
 
         $response = $this->actingAs($adminUser)->get('/admin');
+
+        $response->assertOk();
+    }
+
+    public function test_authenticated_sales_user_can_access_admin_panel(): void
+    {
+        $salesRole = Role::query()->create([
+            'code' => 'sales',
+            'name' => 'Sales',
+        ]);
+
+        $salesUser = User::factory()->create();
+        $salesUser->roles()->attach($salesRole);
+
+        $response = $this->actingAs($salesUser)->get('/admin');
 
         $response->assertOk();
     }
