@@ -71,4 +71,9 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasMany(Quote::class, 'prepared_by_user_id');
     }
+
+    public function quoteApprovals(): HasMany
+    {
+        return $this->hasMany(QuoteApproval::class, 'approver_user_id');
+    }
 }
